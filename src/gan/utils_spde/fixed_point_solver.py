@@ -55,29 +55,26 @@ class KernelConvolution(nn.Module):
         
         # lower and upper bounds of selected frequencies
         freqs = [ (z.size(2+i)//2 - self.modes[i]//2, z.size(2+i)//2 + self.modes[i]//2) for i in range(len(self.modes)) ]
- 
-        if not init: # S * u
 
-            # Compute FFT
-            z_ft = torch.fft.fftn(z, dim=self.dims)
-            z_ft = torch.fft.fftshift(z_ft, dim=self.dims)
- 
-            # Pointwise multiplication of kernel_tensor and func_fft
-            out_ft = torch.zeros(z.size(), device=z.device, dtype=torch.cfloat)
-            if len(self.modes)==2: # 1d case
-                out_ft[:, :, freqs[0][0]:freqs[0][1], freqs[1][0]:freqs[1][1] ] = compl_mul2d(z_ft[:, :, freqs[0][0]:freqs[0][1], freqs[1][0]:freqs[1][1] ], self.weights)
-            else: # 2d case
-                out_ft[:, :, freqs[0][0]:freqs[0][1], freqs[1][0]:freqs[1][1], freqs[2][0]:freqs[2][1] ] = compl_mul3d(z_ft[:, :, freqs[0][0]:freqs[0][1], freqs[1][0]:freqs[1][1], freqs[2][0]:freqs[2][1] ], self.weights)
-            
-            # Compute Inverse FFT  
-            out_ft = torch.fft.ifftshift(out_ft, dim=self.dims) 
-            
-            z = torch.fft.ifftn(out_ft, dim=self.dims)
-
-            return z.real
-
-        else: # S_t * z_0
+        if init:
             return self.forward_init(z, grid)
+        # Compute FFT
+        z_ft = torch.fft.fftn(z, dim=self.dims)
+        z_ft = torch.fft.fftshift(z_ft, dim=self.dims)
+
+        # Pointwise multiplication of kernel_tensor and func_fft
+        out_ft = torch.zeros(z.size(), device=z.device, dtype=torch.cfloat)
+        if len(self.modes)==2: # 1d case
+            out_ft[:, :, freqs[0][0]:freqs[0][1], freqs[1][0]:freqs[1][1] ] = compl_mul2d(z_ft[:, :, freqs[0][0]:freqs[0][1], freqs[1][0]:freqs[1][1] ], self.weights)
+        else: # 2d case
+            out_ft[:, :, freqs[0][0]:freqs[0][1], freqs[1][0]:freqs[1][1], freqs[2][0]:freqs[2][1] ] = compl_mul3d(z_ft[:, :, freqs[0][0]:freqs[0][1], freqs[1][0]:freqs[1][1], freqs[2][0]:freqs[2][1] ], self.weights)
+
+        # Compute Inverse FFT  
+        out_ft = torch.fft.ifftshift(out_ft, dim=self.dims) 
+
+        z = torch.fft.ifftn(out_ft, dim=self.dims)
+
+        return z.real
 
     
     def forward_init(self, z0_path, grid=None):
@@ -137,7 +134,7 @@ class NeuralFixedPoint(nn.Module):
         """
         
         # if True 1d, else 2d
-        assert len(xi.size()) in [4,5], '1d and 2d cases only are implemented '
+        assert len(xi.size()) in {4, 5}, '1d and 2d cases only are implemented '
         dim_flag = len(xi.size())==4
 
         # constant path
@@ -168,7 +165,7 @@ class NeuralFixedPoint(nn.Module):
                 y = z0_path + self.convolution(H_z_xi, grid=grid)
             else:
                 y = z0_path + self.convolution(H_z_xi)
-            
+
             z = y
-        
+
         return y

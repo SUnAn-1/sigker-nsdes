@@ -88,9 +88,7 @@ class rBergomi(object):
         # Extract appropriate part of convolution
         Y2 = GX[:, :self.s]
 
-        # Finally contruct and return full process
-        Y = np.sqrt(2 * self.a + 1) * (Y1 + Y2)
-        return Y
+        return np.sqrt(2 * self.a + 1) * (Y1 + Y2)
 
     def dW2(self):
         """
@@ -103,8 +101,7 @@ class rBergomi(object):
         Constructs correlated price Brownian increments, dB.
         """
         self.rho = rho
-        dB = rho * dW1[:, :, 0] + np.sqrt(1 - rho**2) * dW2
-        return dB
+        return rho * dW1[:, :, 0] + np.sqrt(1 - rho**2) * dW2
 
     def V(self, Y, xi = 1.0, eta = 1.0):
         """
@@ -114,8 +111,7 @@ class rBergomi(object):
         self.eta = eta
         a = self.a
         t = self.t
-        V = xi * np.exp(eta * Y - 0.5 * eta**2 * t**(2 * a + 1))
-        return V
+        return xi * np.exp(eta * Y - 0.5 * eta**2 * t**(2 * a + 1))
 
     def S(self, V, dB, S0 = 1):
         """

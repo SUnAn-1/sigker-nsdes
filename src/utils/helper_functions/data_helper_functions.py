@@ -105,17 +105,12 @@ def ema(s, n):
     moving average
     """
     s = np.array(s)
-    ema = []
     j = 1
 
     #get n sma first and calculate the next n period ema
     sma = sum(s[:n]) / n
     multiplier = 2 / float(1 + n)
-    ema.append(sma)
-
-    #EMA(current) = ( (Price(current) - EMA(prev) ) x Multiplier) + EMA(prev)
-    ema.append(( (s[n] - sma) * multiplier) + sma)
-
+    ema = [sma, ( (s[n] - sma) * multiplier) + sma]
     #now calculate the rest of the values
     for i in s[n+1:]:
         tmp = ( (i - ema[j]) * multiplier) + ema[j]
@@ -219,11 +214,7 @@ def build_path_bank(sde, path_length, end_time, dataset_size, output_size, devic
         tscale = sdeint_kwargs.get("sde_dt_scale")
     except KeyError:
         print("sde_int arguments not provided, defaulting")
-        if sde.sde_type == "stratonovich":
-            method = "euler_heun"
-        else:
-            method = "euler"
-
+        method = "euler_heun" if sde.sde_type == "stratonovich" else "euler"
         tscale = 1.0
 
     dt = torch.diff(ts)[0] * tscale
@@ -315,16 +306,15 @@ def bs(F, K, V, o = 'call'):
     """
     # Set appropriate weight for option token o
     w = 1
-    if o == 'put':
-        w = -1
-    elif o == 'otm':
+    if o == 'otm':
         w = 2 * (K > 1.0) - 1
 
+    elif o == 'put':
+        w = -1
     sv = np.sqrt(V)
     d1 = np.log(F/K) / sv + 0.5 * sv
     d2 = d1 - sv
-    P = w * F * norm.cdf(w * d1) - w * K * norm.cdf(w * d2)
-    return P
+    return w * F * norm.cdf(w * d1) - w * K * norm.cdf(w * d2)
 
 
 def bsinv(P, F, K, t, o = 'call'):

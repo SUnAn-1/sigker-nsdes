@@ -31,11 +31,7 @@ class GeneratorFunc(torch.nn.Module):
         self.sde_type = sde_type
         self.noise_type = noise_type
 
-        if noise_type == "diagonal":
-            self._noise_size = 1
-        else:
-            self._noise_size = noise_size
-
+        self._noise_size = 1 if noise_type == "diagonal" else noise_size
         self._hidden_size = hidden_size
 
         self._drift = MLP(1 + hidden_size, hidden_size, mlp_size, num_layers, activation, tanh=tanh, tscale=tscale)
@@ -65,12 +61,13 @@ class GeneratorFunc(torch.nn.Module):
     def g(self, t, x):
         t = t.expand(x.size(0), 1)
         tx = torch.cat([t, x], dim=1)
-        if self.noise_type == "diagonal":
-            diffusion = self._diffusion(tx)
-        else:
-            diffusion = self._diffusion(tx).view(x.size(0), self._hidden_size, self._noise_size)
-
-        return diffusion
+        return (
+            self._diffusion(tx)
+            if self.noise_type == "diagonal"
+            else self._diffusion(tx).view(
+                x.size(0), self._hidden_size, self._noise_size
+            )
+        )
 
 
 class Generator(torch.nn.Module):
@@ -144,11 +141,7 @@ class ConditionalGeneratorFunc(torch.nn.Module):
         self.sde_type   = sde_type
         self.noise_type = noise_type
 
-        if noise_type == "diagonal":
-            self._noise_size = 1
-        else:
-            self._noise_size = noise_size
-
+        self._noise_size = 1 if noise_type == "diagonal" else noise_size
         self._hidden_size = hidden_size
         self._drift = MLP(1 + hidden_size + n_conditions, hidden_size, mlp_size, num_layers, activation, tanh=tanh,
                           tscale=tscale)

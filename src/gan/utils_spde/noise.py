@@ -23,15 +23,13 @@ class Noise(object):
         
     def return_corr(self, grid):
         T, X = grid[0,:,1], grid[:,0,0]
-        
+
         dt, dx = T[1]-T[0], X[1]-X[0]
         N = len(X)
-        
+
         # Create correlation Matrix in space
         grid_x = X.unsqueeze(-1).repeat(1,len(X))
-        space_corr = self.correlation(grid_x, dx * (N))  #(x_k,j)
-        
-        return space_corr
+        return self.correlation(grid_x, dx * (N))
         
     
     def partition(self, a, b, dx): #makes a partition of [a,b] of equal sizes dx
@@ -49,7 +47,10 @@ class Noise(object):
 
     def sample(self, n_sample_paths, grid):
 
-        return torch.stack([self._sample(n_sample_paths, grid) for i in range(self.noise_size)], dim=1)
+        return torch.stack(
+            [self._sample(n_sample_paths, grid) for _ in range(self.noise_size)],
+            dim=1,
+        )
         
     
     # Create space time noise. White in time and with some correlation in space.
@@ -89,5 +90,4 @@ def smooth_corr(x, a, r = 2):
     j = 1.*torch.arange(1,x.shape[0]+1).to(x.device)
     j[-1] = 0.
     q = j**(-(2*r+1+my_eps)/2)
-    res = torch.sqrt(q)*torch.sqrt(2 / a) * torch.sin(j * torch.pi * x / a)
-    return res
+    return torch.sqrt(q)*torch.sqrt(2 / a) * torch.sin(j * torch.pi * x / a)

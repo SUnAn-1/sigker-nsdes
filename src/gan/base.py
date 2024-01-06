@@ -203,11 +203,7 @@ def preprocess_real_data(data_kwargs: dict, real_data_kwargs: dict):
         key_val = this_df.columns
         this_df = this_df.rename(columns={k: k + f"_{pair}" for k in key_val[1:]})
 
-        if i == 0:
-            data = this_df
-        else:
-            data = pd.merge(data, this_df, how="left", on="Time")
-
+        data = this_df if i == 0 else pd.merge(data, this_df, how="left", on="Time")
     data = data.set_index("Time")
     data = data[[f"Open_{p}" for p in pairs]]
     data.index = data.index.map(lambda x: pd.Timestamp(x))
@@ -275,7 +271,10 @@ def get_real_data(banks, batch_size, path_bank_size, device, time_add_type="basi
     :param scale:           Scaling to apply to paths
     :return:                Timesteps, output dimension, dataloader object
     """
-    assert len(banks.shape) in [3, 4], "Path bank objects not correct size. Either c x N x l x d or N x l x d"
+    assert len(banks.shape) in {
+        3,
+        4,
+    }, "Path bank objects not correct size. Either c x N x l x d or N x l x d"
 
     if len(banks.shape) == 3:
         banks = np.array([banks])
@@ -621,7 +620,8 @@ def stopping_criterion(generated_samples, real_samples, cutoff=0.99, tol=0.05, p
                 if print_results:
                     test_result = "ACCEPT" if accept else "REJECT"
                     print(
-                        f"Dim {k + 1}, time {l}: KS-2samp statistic: {ks_stat:.4f}, p-value: {ks_p_value:.4f}. " + test_result + " H0.")
+                        f"Dim {k + 1}, time {l}: KS-2samp statistic: {ks_stat:.4f}, p-value: {ks_p_value:.4f}. {test_result} H0."
+                    )
             if print_results:
                 print("\n")
     return criterion / (dim * (length - 1))
