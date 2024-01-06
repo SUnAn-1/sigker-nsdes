@@ -158,29 +158,27 @@ class Generator(torch.nn.Module):
         
         # sample noise 
         noise = self.sampler.sample(batch_size, grid).to(grid.device)
-        
+
         # initial latent state
         if self._initial_point=='fixed':
-            z0 = torch.full(size=(batch_size, self._hidden_size, *grid.shape[:-2]), fill_value=1., device=grid.device) 
+            z0 = torch.full(size=(batch_size, self._hidden_size, *grid.shape[:-2]), fill_value=1., device=grid.device)
         elif self._initial_point=='random':
             init_noise = torch.randn(batch_size, self._initial_noise_size, *grid.shape[:-2], device=grid.device)
             if self.dim == 1:
                 z0 = self._initial(init_noise.permute(0,2,1)).permute(0,2,1)  
             elif self.dim == 2:
-                z0 = self._initial(init_noise.permute(0,2,3,1)).permute(0,3,1,2)  
-        else:
-            if self.dim == 1:
-                z0 = self._initial(u0.permute(0,2,1)).permute(0,2,1)  
-            elif self.dim == 2:
-                z0 = self._initial(u0.permute(0,2,3,1)).permute(0,3,1,2) 
-            
+                z0 = self._initial(init_noise.permute(0,2,3,1)).permute(0,3,1,2)
+        elif self.dim == 1:
+            z0 = self._initial(u0.permute(0,2,1)).permute(0,2,1)
+        elif self.dim == 2:
+            z0 = self._initial(u0.permute(0,2,3,1)).permute(0,3,1,2) 
+
         # Actually solve the SPDE. 
         zs = self.spdeint_func(z0, noise, grid)
 
-        if self.dim==1:
-            ys = self._readout(zs.permute(0,2,3,1)).permute(0,2,1,3) # (batch, dim_t, dim_x, data_size)
-        else:
-            ys = self._readout(zs.permute(0,2,3,4,1)).permute(0,3,1,2,4)  # (batch, dim_t, dim_x, dim_y, data_size)
-        
-        return ys
+        return (
+            self._readout(zs.permute(0, 2, 3, 1)).permute(0, 2, 1, 3)
+            if self.dim == 1
+            else self._readout(zs.permute(0, 2, 3, 4, 1)).permute(0, 3, 1, 2, 4)
+        )
 

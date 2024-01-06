@@ -14,16 +14,14 @@ class SummedKernel(object):
         self.n_kernels = len(kernels)
 
     def compute_scoring_rule(self, X, y, max_batch=128):
-        res = 0
-        for k in self._kernels:
-            res += k.compute_scoring_rule(X, y, max_batch=max_batch)
+        res = sum(
+            k.compute_scoring_rule(X, y, max_batch=max_batch)
+            for k in self._kernels
+        )
         return res/self.n_kernels
 
     def compute_mmd(self, X, Y, max_batch=128):
-        res = 0
-        for k in self._kernels:
-            res += k.compute_mmd(X, Y, max_batch=max_batch)
-
+        res = sum(k.compute_mmd(X, Y, max_batch=max_batch) for k in self._kernels)
         return res/self.n_kernels
 
 
@@ -174,18 +172,17 @@ class SigKerMMDDiscriminator(PathMMDDiscriminator):
         def metric(X, Y, pi=None):
             if pi is None:
                 return self._kernel.compute_mmd(X, Y, max_batch=self.max_batch)
-            else:
-                piX = X.clone()*pi
-                piY = X.clone()*pi
-                K_XX = self._kernel.compute_Gram(piX, X, sym=False, max_batch=self.max_batch)
-                # Because k_\phi(\piX, Y) = k_\phi(X, \piY), we only need to calculate wrt one scaling
-                K_XY = self._kernel.compute_Gram(piX, Y, sym=False, max_batch=self.max_batch)
-                K_YY = self._kernel.compute_Gram(piY, Y, sym=False, max_batch=self.max_batch)
+            piX = X.clone()*pi
+            piY = X.clone()*pi
+            K_XX = self._kernel.compute_Gram(piX, X, sym=False, max_batch=self.max_batch)
+            # Because k_\phi(\piX, Y) = k_\phi(X, \piY), we only need to calculate wrt one scaling
+            K_XY = self._kernel.compute_Gram(piX, Y, sym=False, max_batch=self.max_batch)
+            K_YY = self._kernel.compute_Gram(piY, Y, sym=False, max_batch=self.max_batch)
 
-                mK_XX = (torch.sum(K_XX) - torch.sum(torch.diag(K_XX))) / (K_XX.shape[0] * (K_XX.shape[0] - 1.))
-                mK_YY = (torch.sum(K_YY) - torch.sum(torch.diag(K_YY))) / (K_YY.shape[0] * (K_YY.shape[0] - 1.))
+            mK_XX = (torch.sum(K_XX) - torch.sum(torch.diag(K_XX))) / (K_XX.shape[0] * (K_XX.shape[0] - 1.))
+            mK_YY = (torch.sum(K_YY) - torch.sum(torch.diag(K_YY))) / (K_YY.shape[0] * (K_YY.shape[0] - 1.))
 
-                return mK_XX + mK_YY - 2.*torch.mean(K_XY)
+            return mK_XX + mK_YY - 2.*torch.mean(K_XY)
 
         if self._phi_kernel:
             def _weighted_metric(x, y):
@@ -212,8 +209,9 @@ class WeightedSigKerDiscriminator(SigKerMMDDiscriminator):
 
         assert len(path_scalings) == len(weights), "Error: number of weights must match number of scalings"
         assert sum(weights) == 1, "Error: initial weights do not sum to 1"
-        assert (all([w <= 1 for w in weights])) and (all([w >= 0 for w in weights])), \
-            "Error: weights not between 0 and 1"
+        assert all(w <= 1 for w in weights) and all(
+            w >= 0 for w in weights
+        ), "Error: weights not between 0 and 1"
 
         super().__init__(kernel_type, dyadic_order, path_dim, sigma, adversarial, max_batch)
 
@@ -329,14 +327,13 @@ class SigKerScoreDiscriminator(PathMMDDiscriminator):
         def scoring_rule(X, y, pi=None):
             if pi is None:
                 return self._kernel.compute_scoring_rule(X, y.unsqueeze(0), max_batch=self.max_batch)
-            else:
-                piX = X.clone()*pi
-                K_XX = self._kernel.compute_Gram(piX, X, sym=False, max_batch=self.max_batch)
-                K_Xy = self._kernel.compute_Gram(piX, y.unsqueeze(0), sym=False, max_batch=self.max_batch)
+            piX = X.clone()*pi
+            K_XX = self._kernel.compute_Gram(piX, X, sym=False, max_batch=self.max_batch)
+            K_Xy = self._kernel.compute_Gram(piX, y.unsqueeze(0), sym=False, max_batch=self.max_batch)
 
-                mK_XX = (torch.sum(K_XX) - torch.sum(torch.diag(K_XX))) / (K_XX.shape[0] * (K_XX.shape[0] - 1.))
+            mK_XX = (torch.sum(K_XX) - torch.sum(torch.diag(K_XX))) / (K_XX.shape[0] * (K_XX.shape[0] - 1.))
 
-                return mK_XX - 2.*torch.mean(K_Xy)
+            return mK_XX - 2.*torch.mean(K_Xy)
 
         if self._phi_kernel:
             def _weighted_metric(x, y):

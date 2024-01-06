@@ -20,15 +20,13 @@ def get_ccor_matrix(paths, lags=(0, 1, 2, 3, 4, 5, 6)):
                     f = paths[:, l2 - 1:, 0]
                     g = paths[:, :-(l2 - 1), 1] if l2 > 1 else paths[..., 1]
 
-                    av_corr = torch.tensor([np.corrcoef(p, q)[0, 1] for p, q in zip(f, g)]).mean()
                 else:
                     lag1 = int(l1 - 1)
                     lag2 = int(l2 - 1)
                     fwd = lag2 - lag1
                     f = paths[:, fwd:-lag1, 1] if lag1 != 0 else paths[:, fwd:, 1]
                     g = paths[:, :-lag2, 1]
-                    av_corr = torch.tensor([np.corrcoef(p, q)[0, 1] for p, q in zip(f, g)]).mean()
-
+                av_corr = torch.tensor([np.corrcoef(p, q)[0, 1] for p, q in zip(f, g)]).mean()
                 res[i, j] = av_corr
                 res[j, i] = av_corr
 
